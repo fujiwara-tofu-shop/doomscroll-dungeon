@@ -2,10 +2,10 @@ import './style.css'
 import Phaser from 'phaser'
 
 const trends = [
-  { name: 'Skibidi Surge', color: 0x6ef3ff, hp: 24, speed: 95, pattern: 'burst' },
-  { name: 'Rizz Reaper', color: 0xff77cc, hp: 30, speed: 120, pattern: 'dash' },
-  { name: 'Ohio Anomaly', color: 0xb4ff5d, hp: 36, speed: 90, pattern: 'orbital' },
-  { name: 'Sigma Static', color: 0xffc65f, hp: 44, speed: 130, pattern: 'dash' },
+  { name: 'Skibidi Surge', tag: 'Toilet Core', emote: '🚽', color: 0x6ef3ff, hp: 28, pattern: 'burst', taunt: 'SKIBIDI MODE ACTIVATED' },
+  { name: 'Rizz Reaper', tag: 'Charm Meta', emote: '😎', color: 0xff77cc, hp: 34, pattern: 'dash', taunt: 'UNSPOKEN RIZZ DETECTED' },
+  { name: 'Ohio Anomaly', tag: 'Chaos Patch', emote: '💀', color: 0xb4ff5d, hp: 40, pattern: 'orbital', taunt: 'ONLY IN OHIO' },
+  { name: 'Sigma Static', tag: 'Grindset Feed', emote: '🗿', color: 0xffc65f, hp: 48, pattern: 'dash', taunt: 'STAY SIGMA OR PERISH' },
 ]
 
 class DoomscrollScene extends Phaser.Scene {
@@ -15,18 +15,15 @@ class DoomscrollScene extends Phaser.Scene {
     this.bestRoom = Number(localStorage.getItem('doomscroll_best_room') || 0)
     this.hp = 100
     this.boss = null
+    this.bossRadius = 40
     this.nextBossAt = 0
   }
 
   create() {
     const { width, height } = this.scale
-    this.cameras.main.setBackgroundColor('#0a0f1f')
+    this.cameras.main.setBackgroundColor('#0b1020')
 
-    // Grid background
-    const g = this.add.graphics()
-    g.lineStyle(1, 0x1d2e4f, 0.35)
-    for (let x = 0; x < width; x += 40) g.lineBetween(x, 0, x, height)
-    for (let y = 0; y < height; y += 40) g.lineBetween(0, y, width, y)
+    this.bg = this.add.rectangle(width / 2, height / 2, width, height, 0x0b1020)
 
     this.player = this.add.circle(width / 2, height - 90, 16, 0xffffff)
     this.physics.add.existing(this.player)
@@ -42,8 +39,8 @@ class DoomscrollScene extends Phaser.Scene {
       restart: Phaser.Input.Keyboard.KeyCodes.R,
     })
 
-    this.bullets = this.physics.add.group({ maxSize: 120 })
-    this.enemyBullets = this.physics.add.group({ maxSize: 220 })
+    this.bullets = this.physics.add.group({ maxSize: 200 })
+    this.enemyBullets = this.physics.add.group({ maxSize: 320 })
 
     this.input.on('pointerdown', (p) => this.fireAt(p.worldX, p.worldY))
     this.input.keyboard.on('keydown-SPACE', () => {
@@ -51,29 +48,20 @@ class DoomscrollScene extends Phaser.Scene {
       this.fireAt(p.worldX, p.worldY)
     })
 
-    this.physics.add.overlap(this.bullets, () => this.bossSprite, (bullet) => {
-      if (!this.bossSprite?.active) return
-      bullet.destroy()
-      this.boss.hp -= 1
-      this.bossHpText.setText(`Boss HP: ${this.boss.hp}`)
-      this.tweens.add({ targets: this.bossSprite, scale: 1.15, yoyo: true, duration: 70 })
-      if (this.boss.hp <= 0) this.clearRoom()
-    })
-
     this.physics.add.overlap(this.player, this.enemyBullets, (_player, b) => {
       b.destroy()
-      this.damagePlayer(6)
+      this.damagePlayer(7)
     })
 
     this.title = this.add.text(18, 12, 'DOOMSCROLL DUNGEON', { fontFamily: 'system-ui', fontSize: '24px', color: '#9fe3ff', fontStyle: '700' })
     this.roomText = this.add.text(18, 44, 'Room: 0', { fontSize: '18px', color: '#f2f6ff' })
     this.bestText = this.add.text(18, 68, `Best: ${this.bestRoom}`, { fontSize: '16px', color: '#87ffa7' })
     this.hpText = this.add.text(18, 90, 'HP: 100', { fontSize: '16px', color: '#ffd2d2' })
-    this.bossText = this.add.text(width - 18, 18, '', { fontSize: '18px', color: '#fff', align: 'right' }).setOrigin(1, 0)
-    this.bossHpText = this.add.text(width - 18, 44, '', { fontSize: '16px', color: '#ffd8a8', align: 'right' }).setOrigin(1, 0)
-    this.help = this.add.text(width / 2, height - 28, 'WASD move · click/space shoot · Shift dash · R restart', { fontSize: '14px', color: '#b6c7ec' }).setOrigin(0.5)
+    this.bossText = this.add.text(width - 18, 18, '', { fontSize: '20px', color: '#fff', align: 'right', fontStyle: '700' }).setOrigin(1, 0)
+    this.bossHpText = this.add.text(width - 18, 46, '', { fontSize: '16px', color: '#ffd8a8', align: 'right' }).setOrigin(1, 0)
+    this.memeTicker = this.add.text(width / 2, height - 26, 'WASD move · click/space shoot · Shift dash · R restart', { fontSize: '14px', color: '#b6c7ec' }).setOrigin(0.5)
 
-    this.banner = this.add.text(width / 2, height / 2, 'Press click or SPACE to begin', {
+    this.banner = this.add.text(width / 2, height / 2, 'Tap or SPACE to enter the feed', {
       fontSize: '30px',
       color: '#ffffff',
       backgroundColor: '#15233d',
@@ -105,19 +93,29 @@ class DoomscrollScene extends Phaser.Scene {
     const trend = trends[(this.room - 1) % trends.length]
     this.boss = {
       ...trend,
-      hp: trend.hp + Math.floor(this.room * 1.4),
-      phase: 0,
+      hp: trend.hp + Math.floor(this.room * 1.8),
       t: 0,
     }
 
     const { width } = this.scale
-    this.bossSprite?.destroy()
-    this.bossSprite = this.add.circle(width / 2, 130, 32, this.boss.color)
-    this.physics.add.existing(this.bossSprite)
-    this.bossSprite.body.setImmovable(true)
+    this.bossBody?.destroy()
+    this.bossLabel?.destroy()
+    this.bossTag?.destroy()
+
+    this.bg.setFillStyle(Phaser.Display.Color.IntegerToColor(trend.color).darken(65).color, 1)
+
+    this.bossBody = this.add.circle(width / 2, 130, this.bossRadius, trend.color)
+    this.physics.add.existing(this.bossBody)
+    this.bossBody.body.setImmovable(true)
+
+    this.bossLabel = this.add.text(width / 2, 130, trend.emote, { fontSize: '42px' }).setOrigin(0.5)
+    this.bossTag = this.add.text(width / 2, 176, `${trend.name} // ${trend.tag}`, {
+      fontSize: '18px', color: '#ffffff', backgroundColor: '#00000066', padding: { x: 10, y: 4 }, fontStyle: '700'
+    }).setOrigin(0.5)
 
     this.bossText.setText(`Trend Boss: ${this.boss.name}`)
     this.bossHpText.setText(`Boss HP: ${this.boss.hp}`)
+    this.memeTicker.setText(`🔥 ${trend.taunt} · room ${this.room}`)
 
     this.popText(`ROOM ${this.room}: ${this.boss.name}`)
     this.nextBossAt = this.time.now + 500
@@ -141,19 +139,13 @@ class DoomscrollScene extends Phaser.Scene {
     this.started = false
     this.physics.pause()
     this.popText('YOU GOT DOOMSCROLLED')
-    this.time.delayedCall(800, () => {
-      this.scene.restart()
-    })
+    this.time.delayedCall(850, () => this.scene.restart())
   }
 
   popText(msg) {
     const { width, height } = this.scale
     const t = this.add.text(width / 2, height / 2 - 70, msg, {
-      fontSize: '34px',
-      color: '#fff7ad',
-      fontStyle: '800',
-      stroke: '#201a08',
-      strokeThickness: 6,
+      fontSize: '34px', color: '#fff7ad', fontStyle: '800', stroke: '#201a08', strokeThickness: 6,
     }).setOrigin(0.5)
     this.tweens.add({ targets: t, y: t.y - 40, alpha: 0, duration: 850, onComplete: () => t.destroy() })
   }
@@ -177,52 +169,68 @@ class DoomscrollScene extends Phaser.Scene {
     this.time.delayedCall(3800, () => b.destroy())
   }
 
+  handleBossHits() {
+    if (!this.boss || !this.bossBody) return
+    this.bullets.getChildren().forEach((b) => {
+      if (!b.active) return
+      const d = Phaser.Math.Distance.Between(b.x, b.y, this.bossBody.x, this.bossBody.y)
+      if (d < this.bossRadius + 6) {
+        b.destroy()
+        this.boss.hp -= 1
+        this.bossHpText.setText(`Boss HP: ${this.boss.hp}`)
+        this.tweens.add({ targets: this.bossBody, scale: 1.1, yoyo: true, duration: 60 })
+        if (this.boss.hp <= 0) this.clearRoom()
+      }
+    })
+  }
+
   update(_t, dtMs) {
     if (!this.started) return
     const dt = dtMs / 1000
 
-    // Player movement
     const speed = this.cursors.dash.isDown ? 260 : 190
-    let vx = 0
-    let vy = 0
+    let vx = 0, vy = 0
     if (this.cursors.left.isDown) vx -= speed
     if (this.cursors.right.isDown) vx += speed
     if (this.cursors.up.isDown) vy -= speed
     if (this.cursors.down.isDown) vy += speed
     this.player.body.setVelocity(vx, vy)
 
-    // Boss behavior
-    if (this.boss && this.bossSprite) {
+    if (this.boss && this.bossBody) {
       this.boss.t += dt
       const t = this.boss.t
       const { width } = this.scale
-      this.bossSprite.x = width / 2 + Math.sin(t * 1.35) * 170
-      this.bossSprite.y = 130 + Math.sin(t * 2.2) * 26
+      this.bossBody.x = width / 2 + Math.sin(t * 1.35) * 170
+      this.bossBody.y = 130 + Math.sin(t * 2.2) * 26
+      this.bossLabel?.setPosition(this.bossBody.x, this.bossBody.y)
+      this.bossTag?.setPosition(this.bossBody.x, this.bossBody.y + 46)
 
       if (this.time.now > this.nextBossAt) {
         this.nextBossAt = this.time.now + Math.max(220, 760 - this.room * 18)
         if (this.boss.pattern === 'burst') {
           for (let i = 0; i < 10; i++) {
             const a = (Math.PI * 2 * i) / 10 + t
-            this.spawnEnemyBullet(this.bossSprite.x, this.bossSprite.y, Math.cos(a) * 140, Math.sin(a) * 140, 6, 0xff9a7c)
+            this.spawnEnemyBullet(this.bossBody.x, this.bossBody.y, Math.cos(a) * 145, Math.sin(a) * 145, 6, 0xff9a7c)
           }
         } else if (this.boss.pattern === 'dash') {
-          const a = Phaser.Math.Angle.Between(this.bossSprite.x, this.bossSprite.y, this.player.x, this.player.y)
+          const a = Phaser.Math.Angle.Between(this.bossBody.x, this.bossBody.y, this.player.x, this.player.y)
           for (let i = -2; i <= 2; i++) {
             const aa = a + i * 0.08
-            this.spawnEnemyBullet(this.bossSprite.x, this.bossSprite.y, Math.cos(aa) * 250, Math.sin(aa) * 250, 7, 0xff65c4)
+            this.spawnEnemyBullet(this.bossBody.x, this.bossBody.y, Math.cos(aa) * 250, Math.sin(aa) * 250, 7, 0xff65c4)
           }
         } else {
           for (let i = 0; i < 6; i++) {
             const a = t * 2 + i * 1.04
-            const sx = this.bossSprite.x + Math.cos(a) * 40
-            const sy = this.bossSprite.y + Math.sin(a) * 40
+            const sx = this.bossBody.x + Math.cos(a) * 40
+            const sy = this.bossBody.y + Math.sin(a) * 40
             const toPlayer = Phaser.Math.Angle.Between(sx, sy, this.player.x, this.player.y)
             this.spawnEnemyBullet(sx, sy, Math.cos(toPlayer) * 180, Math.sin(toPlayer) * 180, 7, 0x9aff7f)
           }
         }
       }
     }
+
+    this.handleBossHits()
 
     if (Phaser.Input.Keyboard.JustDown(this.cursors.restart)) this.scene.restart()
   }
