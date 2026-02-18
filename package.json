@@ -16,5 +16,6 @@
   },
   "dependencies": {
     "phaser": "^3.90.0"
-  }
+  },
+  "homepage": "https://fujiwara-tofu-shop.github.io/doomscroll-dungeon"
 }
