@@ -54,6 +54,7 @@ class DoomscrollScene extends Phaser.Scene {
     this.boss = null
     this.bossRadius = 42
     this.nextBossAt = 0
+    this.iframesUntil = 0
   }
 
   preload() {
@@ -93,7 +94,7 @@ class DoomscrollScene extends Phaser.Scene {
 
     this.physics.add.overlap(this.player, this.enemyBullets, (_player, b) => {
       b.destroy()
-      this.damagePlayer(7)
+      this.damagePlayer(10)
     })
 
     this.title = this.add.text(18, 12, 'DOOMSCROLL DUNGEON', { fontFamily: 'system-ui', fontSize: '24px', color: '#9fe3ff', fontStyle: '700' })
@@ -137,7 +138,7 @@ class DoomscrollScene extends Phaser.Scene {
     const trend = trends[idx]
     this.boss = {
       ...trend,
-      hp: trend.hp + Math.floor(this.room * 1.8),
+      hp: trend.hp + Math.floor(this.room * 0.9),
       t: 0,
       key: `boss_${idx}`,
     }
@@ -168,15 +169,19 @@ class DoomscrollScene extends Phaser.Scene {
 
   clearRoom() {
     this.enemyBullets.clear(true, true)
-    this.popText('ROOM CLEARED')
+    this.hp = Math.min(100, this.hp + 12)
+    this.hpText.setText(`HP: ${this.hp}`)
+    this.popText('ROOM CLEARED +12 HP')
     this.time.delayedCall(900, () => this.nextRoom())
   }
 
   damagePlayer(amount) {
+    if (this.time.now < this.iframesUntil) return
+    this.iframesUntil = this.time.now + 600
     this.hp = Math.max(0, this.hp - amount)
     this.hpText.setText(`HP: ${this.hp}`)
     this.cameras.main.shake(90, 0.0035)
-    this.tweens.add({ targets: this.player, alpha: 0.3, yoyo: true, duration: 70, repeat: 2 })
+    this.tweens.add({ targets: this.player, alpha: 0.2, yoyo: true, duration: 70, repeat: 4 })
     if (this.hp <= 0) this.gameOver()
   }
 
@@ -251,17 +256,17 @@ class DoomscrollScene extends Phaser.Scene {
       this.bossTag?.setPosition(this.bossBody.x, this.bossBody.y + 56)
 
       if (this.time.now > this.nextBossAt) {
-        this.nextBossAt = this.time.now + Math.max(220, 760 - this.room * 18)
+        this.nextBossAt = this.time.now + Math.max(360, 980 - this.room * 12)
         if (this.boss.pattern === 'burst') {
           for (let i = 0; i < 10; i++) {
             const a = (Math.PI * 2 * i) / 10 + t
-            this.spawnEnemyBullet(this.bossBody.x, this.bossBody.y, Math.cos(a) * 145, Math.sin(a) * 145, 6, 0xff9a7c)
+            this.spawnEnemyBullet(this.bossBody.x, this.bossBody.y, Math.cos(a) * 105, Math.sin(a) * 105, 6, 0xff9a7c)
           }
         } else if (this.boss.pattern === 'dash') {
           const a = Phaser.Math.Angle.Between(this.bossBody.x, this.bossBody.y, this.player.x, this.player.y)
           for (let i = -2; i <= 2; i++) {
             const aa = a + i * 0.08
-            this.spawnEnemyBullet(this.bossBody.x, this.bossBody.y, Math.cos(aa) * 250, Math.sin(aa) * 250, 7, 0xff65c4)
+            this.spawnEnemyBullet(this.bossBody.x, this.bossBody.y, Math.cos(aa) * 170, Math.sin(aa) * 170, 7, 0xff65c4)
           }
         } else {
           for (let i = 0; i < 6; i++) {
@@ -269,7 +274,7 @@ class DoomscrollScene extends Phaser.Scene {
             const sx = this.bossBody.x + Math.cos(a) * 40
             const sy = this.bossBody.y + Math.sin(a) * 40
             const toPlayer = Phaser.Math.Angle.Between(sx, sy, this.player.x, this.player.y)
-            this.spawnEnemyBullet(sx, sy, Math.cos(toPlayer) * 180, Math.sin(toPlayer) * 180, 7, 0x9aff7f)
+            this.spawnEnemyBullet(sx, sy, Math.cos(toPlayer) * 130, Math.sin(toPlayer) * 130, 7, 0x9aff7f)
           }
         }
       }
