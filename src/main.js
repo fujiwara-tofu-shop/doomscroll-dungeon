@@ -1,11 +1,48 @@
 import './style.css'
 import Phaser from 'phaser'
 
+// Trend names sourced from current 2026 meme roundup/search signals.
 const trends = [
-  { name: 'Skibidi Surge', tag: 'Toilet Core', emote: '🚽', color: 0x6ef3ff, hp: 28, pattern: 'burst', taunt: 'SKIBIDI MODE ACTIVATED' },
-  { name: 'Rizz Reaper', tag: 'Charm Meta', emote: '😎', color: 0xff77cc, hp: 34, pattern: 'dash', taunt: 'UNSPOKEN RIZZ DETECTED' },
-  { name: 'Ohio Anomaly', tag: 'Chaos Patch', emote: '💀', color: 0xb4ff5d, hp: 40, pattern: 'orbital', taunt: 'ONLY IN OHIO' },
-  { name: 'Sigma Static', tag: 'Grindset Feed', emote: '🗿', color: 0xffc65f, hp: 48, pattern: 'dash', taunt: 'STAY SIGMA OR PERISH' },
+  {
+    name: 'Nihilist Penguin',
+    tag: '2026 doom humor',
+    emote: '🐧',
+    color: 0x86d9ff,
+    hp: 30,
+    pattern: 'burst',
+    taunt: 'nothing matters, dodge anyway',
+    img: 'https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f427.png',
+  },
+  {
+    name: 'Rare Aesthetic',
+    tag: 'nostalgia-core clips',
+    emote: '✨',
+    color: 0xff77cc,
+    hp: 36,
+    pattern: 'dash',
+    taunt: 'oddly specific vibe check',
+    img: 'https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/2728.png',
+  },
+  {
+    name: 'Skeleton Banging Shield',
+    tag: 'chaos reaction meta',
+    emote: '💀',
+    color: 0xb4ff5d,
+    hp: 42,
+    pattern: 'orbital',
+    taunt: 'bonk bonk bonk',
+    img: 'https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f480.png',
+  },
+  {
+    name: 'Great Meme Reset',
+    tag: 'feed wipe event',
+    emote: '🔁',
+    color: 0xffc65f,
+    hp: 50,
+    pattern: 'dash',
+    taunt: 'timeline has been patched',
+    img: 'https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f501.png',
+  },
 ]
 
 class DoomscrollScene extends Phaser.Scene {
@@ -15,8 +52,14 @@ class DoomscrollScene extends Phaser.Scene {
     this.bestRoom = Number(localStorage.getItem('doomscroll_best_room') || 0)
     this.hp = 100
     this.boss = null
-    this.bossRadius = 40
+    this.bossRadius = 42
     this.nextBossAt = 0
+  }
+
+  preload() {
+    trends.forEach((t, i) => {
+      this.load.image(`boss_${i}`, t.img)
+    })
   }
 
   create() {
@@ -90,26 +133,28 @@ class DoomscrollScene extends Phaser.Scene {
       this.bestText.setText(`Best: ${this.bestRoom}`)
     }
 
-    const trend = trends[(this.room - 1) % trends.length]
+    const idx = (this.room - 1) % trends.length
+    const trend = trends[idx]
     this.boss = {
       ...trend,
       hp: trend.hp + Math.floor(this.room * 1.8),
       t: 0,
+      key: `boss_${idx}`,
     }
 
     const { width } = this.scale
     this.bossBody?.destroy()
-    this.bossLabel?.destroy()
+    this.bossImage?.destroy()
     this.bossTag?.destroy()
 
     this.bg.setFillStyle(Phaser.Display.Color.IntegerToColor(trend.color).darken(65).color, 1)
 
-    this.bossBody = this.add.circle(width / 2, 130, this.bossRadius, trend.color)
+    this.bossBody = this.add.circle(width / 2, 130, this.bossRadius + 8, trend.color, 0.28)
     this.physics.add.existing(this.bossBody)
     this.bossBody.body.setImmovable(true)
 
-    this.bossLabel = this.add.text(width / 2, 130, trend.emote, { fontSize: '42px' }).setOrigin(0.5)
-    this.bossTag = this.add.text(width / 2, 176, `${trend.name} // ${trend.tag}`, {
+    this.bossImage = this.add.image(width / 2, 130, this.boss.key).setDisplaySize(88, 88)
+    this.bossTag = this.add.text(width / 2, 186, `${trend.emote} ${trend.name} // ${trend.tag}`, {
       fontSize: '18px', color: '#ffffff', backgroundColor: '#00000066', padding: { x: 10, y: 4 }, fontStyle: '700'
     }).setOrigin(0.5)
 
@@ -174,11 +219,11 @@ class DoomscrollScene extends Phaser.Scene {
     this.bullets.getChildren().forEach((b) => {
       if (!b.active) return
       const d = Phaser.Math.Distance.Between(b.x, b.y, this.bossBody.x, this.bossBody.y)
-      if (d < this.bossRadius + 6) {
+      if (d < this.bossRadius + 8) {
         b.destroy()
         this.boss.hp -= 1
         this.bossHpText.setText(`Boss HP: ${this.boss.hp}`)
-        this.tweens.add({ targets: this.bossBody, scale: 1.1, yoyo: true, duration: 60 })
+        this.tweens.add({ targets: [this.bossBody, this.bossImage], scale: 1.1, yoyo: true, duration: 60 })
         if (this.boss.hp <= 0) this.clearRoom()
       }
     })
@@ -202,8 +247,8 @@ class DoomscrollScene extends Phaser.Scene {
       const { width } = this.scale
       this.bossBody.x = width / 2 + Math.sin(t * 1.35) * 170
       this.bossBody.y = 130 + Math.sin(t * 2.2) * 26
-      this.bossLabel?.setPosition(this.bossBody.x, this.bossBody.y)
-      this.bossTag?.setPosition(this.bossBody.x, this.bossBody.y + 46)
+      if (this.bossImage) this.bossImage.setPosition(this.bossBody.x, this.bossBody.y)
+      this.bossTag?.setPosition(this.bossBody.x, this.bossBody.y + 56)
 
       if (this.time.now > this.nextBossAt) {
         this.nextBossAt = this.time.now + Math.max(220, 760 - this.room * 18)
