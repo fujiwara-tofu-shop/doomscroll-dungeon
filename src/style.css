@@ -1,0 +1,4 @@
+* { box-sizing: border-box; }
+html, body, #app { margin: 0; width: 100%; height: 100%; background: #090d17; color: #eff4ff; font-family: Inter, system-ui, sans-serif; }
+#app { display: flex; align-items: center; justify-content: center; }
+canvas { width: min(100vw, 960px); height: auto; max-height: 100vh; display: block; border: 1px solid #2f466e; box-shadow: 0 8px 40px rgba(0,0,0,0.45); border-radius: 10px; }
